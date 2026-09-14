@@ -27,7 +27,7 @@ def register_font(path: Path | None) -> str:
         raise PdfError("日本語フォントを読み込めません。配置とTrueType形式を確認してください。") from error
 
 
-def ensure_glyphs(text: str, font_name: str):
+def ensure_glyphs(text: str, font_name: str, field_label: str = "氏名"):
     glyphs = pdfmetrics.getFont(font_name).face.charToGlyph
     if any(ord(char) not in glyphs or glyphs[ord(char)] == 0 for char in text if char != "\n"):
-        raise PdfInputError("氏名にフォント未対応の文字が含まれるため、PDFを生成できません。文字を置換せず、対応フォントを確認してください。")
+        raise PdfInputError(f"{field_label}にフォント未対応の文字が含まれるため、PDFを生成できません。文字を置換せず、対応フォントを確認してください。")

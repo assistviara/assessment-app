@@ -10,18 +10,21 @@ from app.pdf import coordinates, fonts
 from app.pdf import templates as pdf_templates
 from app.pdf.errors import PdfError
 from app.pdf.renderer import render_assessment_pdf
+from app.pdf.mapping import assessment_fields
 from app.views import get_or_404, templates
 
 router = APIRouter()
 
 
-@router.get("/assessments/{assessment_id}/pdf/assessment")
+@router.get("/assessments/{assessment_id}/pdf/assessment", name="assessment_pdf")
 def assessment_pdf(assessment_id: int, request: Request, session: Annotated[Session, Depends(get_session)]):
     assessment = get_or_404(session, Assessment, assessment_id)
     try:
+        fields = assessment_fields(assessment)
         content = render_assessment_pdf(
             assessment.client_snapshot, pdf_templates.ASSESSMENT_TEMPLATE_PATH,
             fonts.JAPANESE_FONT_PATH, coordinates.FIELD_POSITIONS["client_name"],
+            fields=fields,
         )
     except PdfError as error:
         return templates.TemplateResponse(

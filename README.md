@@ -1,7 +1,7 @@
 # Assessment App — Phase 1 / Phase 2
 
 ローカルPCで利用者情報、Assessment、AssessmentCheckを入力・保存・再編集するアプリです。
-Phase 2では1枚目の帳票への氏名重ね合わせを追加します。外部API、クラウド連携は含みません。
+Phase 2では1枚目の帳票へ保存済み基本情報・アセスメント内容を重ねます。外部API、クラウド連携は含みません。
 
 ## 起動
 
@@ -13,6 +13,8 @@ Phase 2では1枚目の帳票への氏名重ね合わせを追加します。外
 ```
 
 ブラウザで `http://127.0.0.1:8000/clients` を開きます。停止はターミナルで `Ctrl+C`。
+開発中にコードを更新した場合は、このサーバーを停止して同じコマンドで再起動してください。
+`--reload`を付けない起動では、ファイルを更新しても実行中サーバーのルート定義は変わりません。
 初回起動時に `data/assessment.sqlite3` とテーブルを作成します。
 通常起動では既存データを保持します。既存DBのスキーマ移行機能は含みません。
 
@@ -98,28 +100,39 @@ EmergencyContactはモデルのみで、操作画面はありません。
 | POST | `/assessments/{assessment_id}` | 既存Assessment更新 |
 | GET | `/assessments/{assessment_id}/check/edit` | Check入力・編集画面 |
 | POST | `/assessments/{assessment_id}/check` | Check保存 |
-| GET | `/assessments/{assessment_id}/pdf/assessment` | 保存済み氏名を重ねた1枚目PDF |
+| GET | `/assessments/{assessment_id}/pdf/assessment` | 保存済み内容を重ねた1枚目PDF |
 
 ## Phase 2：1枚目PDFの印刷
 
-保存済みAssessmentの編集画面から「1枚目PDFを開く（氏名のみ）」を選びます。
+保存済みAssessmentの編集画面から「1枚目PDFを開く」を選びます。
 ブラウザのPDFビューアから印刷し、A4・縦・実際のサイズ（100%）を指定してください。
 フォームで未保存の変更はPDFに含まれません。
 
 - 元帳票: `assets/pdf_templates/assessment_form.pdf`（元ファイルを変更・上書きしません）。
-- データ: `Assessment.client_snapshot["name"]`。現在のClient情報では置き換えません。
-- 座標: `app/pdf/coordinates.py` の `FIELD_POSITIONS["client_name"]`。
+- データ: `Assessment.client_snapshot` と保存済みAssessmentの各項目。現在のClient情報では置き換えません。
+- 座標: `app/pdf/coordinates.py` の各欄・選択肢・日付・白塗り領域の定義。
   左上を原点としたmm単位で位置・枠サイズを指定します。文字サイズはptです。
-- 方式: ReportLabで氏名overlayを生成し、pypdfで元帳票へ合成します。
+- 方式: ReportLabで文字・選択肢の○印のoverlayを生成し、pypdfで元帳票へ合成します。
   完成PDFはメモリ上で生成し、ブラウザへinlineで返します。
 - 日本語フォント: ユーザー承認済みのIPAexゴシック Ver.004.01を埋め込みます。
   `assets/fonts/` に原本フォントとIPAフォントライセンスv1.0を同梱しています。
-- 長い氏名は改行・縮小します。枠に収まらない場合や未対応文字がある場合は、切り捨て・置換をせずエラーを表示します。
-- 2枚目出力、`/pdf/check`、氏名以外の印字は今回の対象外です。
+- 長文は改行・縮小します。枠に収まらない場合や未対応文字がある場合は、切り捨て・置換をせず項目名付きエラーを表示します。
+- 固定文字・選択肢・罫線を保持します。白塗りは元帳票の記入済み事業所・受付者の領域だけです。
+- 受付日は令和で表示し、令和より前の日付は元号に取消線を付けて西暦表示します。認定情報は旧元号Hに取消線を付け、西暦の年月日を記入します。
+- 緊急連絡先は保存時点の履歴がないため空欄です。現在のEmergencyContactを参照しません。
+- 2枚目出力、`/pdf/check`、家族構成図の自動作図は今回の対象外です。
+
+項目別の取得元と将来の連絡先履歴案は [PDF項目対応](docs/20260914_pdf_field_mapping.md) を参照してください。
 
 氏名欄は、用紙左上からx=38.5 mm、y=36.0 mm、幅38.0 mm、高さ4.5 mmに設定しています。
 標準12 pt、最小8 ptです。元帳票の用紙寸法595.44 × 842.4 pt（A4縦相当）を保持します。
 異なる帳票へ差し替える場合は座標の再確認が必要です。
+
+PDFリンクはFastAPIの名前付きルート`assessment_pdf`から生成し、表示中のAssessmentのIDを渡します。
+PDF出力で404になる場合は、`http://127.0.0.1:8000/openapi.json` に
+`/assessments/{assessment_id}/pdf/assessment` があるか確認してください。
+ルートがなければ、旧コードのサーバーが動作していないか確認して再起動します。
+ルートがあって応答が「対象のデータが見つかりません。」の場合は、そのIDのAssessmentが保存されているか確認します。
 
 ## 検証環境
 

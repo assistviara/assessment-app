@@ -3,7 +3,7 @@
 {% block content %}
 <p>利用者：<a href="/clients/{{ client.id }}">{{ client.name }}</a></p>
 {% if not is_new %}
-<p><a href="/assessments/{{ assessment_id }}/pdf/assessment" target="_blank" rel="noopener">1枚目PDFを開く（氏名のみ）</a></p>
+<p><a href="{{ url_for('assessment_pdf', assessment_id=assessment_id) }}" target="_blank" rel="noopener">1枚目PDFを開く</a></p>
 <p>保存済みの内容を出力します。PDFを開いた後、ブラウザの印刷からA4・縦・実際のサイズ（100%）を選んでください。</p>
 {% endif %}
 <section class="panel"><h2>{{ '現在の利用者基本情報（保存時に記録）' if is_new else '作成時の利用者基本情報' }}</h2>

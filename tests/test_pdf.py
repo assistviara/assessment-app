@@ -1,4 +1,5 @@
 from hashlib import sha256
+from html.parser import HTMLParser
 from io import BytesIO
 from math import ceil, floor
 
@@ -10,6 +11,8 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
 from reportlab.pdfgen.canvas import Canvas
 from sqlmodel import select
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from app.models import Assessment, AssessmentCheck, Client
 from app.pdf import coordinates, fonts, templates
@@ -87,7 +90,7 @@ def test_http_uses_snapshot_and_does_not_write_db(web, session, pdf_assets):
     assert response.headers["cache-control"] == "no-store"
     text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
     assert "山田 太郎" in text and "現在の別氏名" not in text
-    assert "氏名以外は出力しない" not in text
+    assert "氏名以外は出力しない" in text
     session.refresh(assessment)
     assert assessment.model_dump() == before
     assert len(session.exec(select(Assessment)).all()) == 1
@@ -102,7 +105,53 @@ def test_second_sheet_endpoint_not_implemented(web):
 
 
 def test_missing_assessment(web):
-    assert web.get("/assessments/999/pdf/assessment").status_code == 404
+    response = web.get("/assessments/999/pdf/assessment")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "対象のデータが見つかりません。"
+
+
+@pytest.mark.parametrize("prefix", ["", "/care"])
+def test_rendered_pdf_link_uses_registered_route_and_correct_assessment(web, session, pdf_assets, prefix):
+    class PdfLinkParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.links = []
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "a" and attrs.get("href", "").endswith("/pdf/assessment"):
+                self.links.append(attrs["href"])
+
+    client = Client(id=20, name="現在の氏名")
+    session.add(client)
+    session.flush()
+    session.add_all([
+        Assessment(id=101, client_id=client.id, client_snapshot={"name": "前回の氏名"}),
+        Assessment(id=202, client_id=client.id, client_snapshot={"name": "対象の氏名"}),
+    ])
+    session.commit()
+    # The fixture already owns this app's lifespan and DB; mounting only tests URL generation.
+    if prefix:
+        application = FastAPI()
+        application.mount(prefix, web.app)
+    else:
+        application = web.app
+    browser = TestClient(application)
+    try:
+        page = browser.get(f"{prefix}/assessments/202/edit")
+        assert page.status_code == 200
+        parser = PdfLinkParser()
+        parser.feed(page.text)
+        assert len(parser.links) == 1
+        assert parser.links[0].endswith(f"{prefix}/assessments/202/pdf/assessment")
+        response = browser.get(parser.links[0])
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/pdf"
+        text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
+        assert "対象の氏名" in text
+        assert "前回の氏名" not in text and "現在の氏名" not in text
+    finally:
+        browser.close()
 
 
 @pytest.mark.parametrize("snapshot", [{}, {"name": ""}, {"name": None}])

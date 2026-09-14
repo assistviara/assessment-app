@@ -15,7 +15,7 @@ class TextLayout:
     ascent: float
 
 
-def fit_text(text: str, font_name: str, box: TextBox) -> TextLayout:
+def fit_text(text: str, font_name: str, box: TextBox, field_label: str = "氏名") -> TextLayout:
     size = box.font_size
     while True:
         ascent, descent = pdfmetrics.getAscentDescent(font_name, size)
@@ -30,8 +30,14 @@ def fit_text(text: str, font_name: str, box: TextBox) -> TextLayout:
                     fits = False
                     break
                 if line and pdfmetrics.stringWidth(line + char, font_name, size) > box.width_mm * mm:
-                    lines.append(line)
-                    line = ""
+                    # Move the preceding character with punctuation to avoid
+                    # starting the next line with Japanese closing punctuation.
+                    if char in "、。，．！？）」』】" and len(line) > 1:
+                        lines.append(line[:-1])
+                        line = line[-1]
+                    else:
+                        lines.append(line)
+                        line = ""
                     if len(lines) >= max_lines:
                         fits = False
                         break
@@ -45,7 +51,7 @@ def fit_text(text: str, font_name: str, box: TextBox) -> TextLayout:
         if fits:
             return TextLayout(tuple(lines), size, leading, ascent)
         if size <= box.min_font_size:
-            raise PdfInputError("氏名が印字枠に収まりません。切り捨てずに生成を中止しました。座標・文字サイズの調整が必要です。")
+            raise PdfInputError(f"{field_label}が印字枠に収まりません。切り捨てずに生成を中止しました。座標・文字サイズの調整が必要です。")
         size = max(box.min_font_size, size - 0.5)
 
 
