@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} | アセスメント</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+  <header><a href="/clients">アセスメント・利用者一覧</a></header>
+  <main>
+    <h1>{{ title }}</h1>
+    {% if errors %}
+    <div class="errors" role="alert"><p>入力内容を確認してください。</p><ul>
+      {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+    </ul></div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

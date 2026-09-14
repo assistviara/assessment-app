@@ -1,0 +1,20 @@
+{% macro render_fields(fields, values, choices) %}
+{% for name, label, kind in fields %}
+<div class="field">
+  <label for="{{ name }}">{{ label }}{% if name == 'name' %}（必須）{% endif %}</label>
+  {% set value = values.get(name) %}
+  {% if kind == 'textarea' %}
+  <textarea id="{{ name }}" name="{{ name }}" rows="4">{{ value if value is not none else '' }}</textarea>
+  {% elif kind == 'select' %}
+  <select id="{{ name }}" name="{{ name }}">
+    <option value="">未入力</option>
+    {% for key, text in choices[name].items() %}
+    <option value="{{ key }}" {% if value is not none and value|string == key|string %}selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+  {% else %}
+  <input id="{{ name }}" name="{{ name }}" type="{{ kind }}" value="{{ value if value is not none else '' }}" {% if name == 'name' %}required{% endif %}>
+  {% endif %}
+</div>
+{% endfor %}
+{% endmacro %}

@@ -1,0 +1,1 @@
+"""Local assessment application."""

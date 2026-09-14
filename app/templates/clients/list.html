@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<form method="get" action="/clients" class="panel">
+  <label for="q">氏名検索</label>
+  <input id="q" name="q" value="{{ q }}">
+  <div class="actions"><button type="submit">検索</button><a href="/clients">検索を解除</a></div>
+</form>
+<p><a href="/clients/new">新規利用者登録</a></p>
+<div class="table-wrap"><table>
+  <thead><tr><th>氏名</th><th>生年月日</th><th>最終アセスメント日</th></tr></thead>
+  <tbody>{% for client, last_date in rows %}
+    <tr><td><a href="/clients/{{ client.id }}">{{ client.name }}</a></td><td>{{ client.birth_date or '未入力' }}</td><td>{{ last_date or '未登録' }}</td></tr>
+  {% else %}<tr><td colspan="3">該当する利用者はいません。</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

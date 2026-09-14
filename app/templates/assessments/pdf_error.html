@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block content %}
+<p class="errors" role="alert">{{ message }}</p>
+<p><a href="/assessments/{{ assessment_id }}/edit">Assessmentに戻る</a></p>
+{% endblock %}

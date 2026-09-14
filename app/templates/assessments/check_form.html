@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% from 'fields.html' import render_fields %}
+{% block content %}
+<p>利用者：<a href="/clients/{{ client.id }}">{{ client.name }}</a> / Assessment {{ assessment.id }}</p>
+<form method="post" action="/assessments/{{ assessment.id }}/check">
+  <fieldset><legend>AssessmentCheck</legend>{{ render_fields(fields, values, choices) }}</fieldset>
+  <div class="actions"><button type="submit">保存</button><a href="/clients/{{ client.id }}">キャンセル</a></div>
+</form>
+{% endblock %}

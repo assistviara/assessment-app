@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% from 'fields.html' import render_fields %}
+{% block content %}
+<form method="post" action="{{ action }}">
+  <fieldset><legend>利用者基本情報</legend>{{ render_fields(fields, values, choices) }}</fieldset>
+  <div class="actions"><button type="submit">保存</button><a href="{{ cancel_url }}">キャンセル</a></div>
+</form>
+{% endblock %}
