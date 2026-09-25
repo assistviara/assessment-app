@@ -14,6 +14,7 @@ from app.pdf.templates import load_template
 from app.pdf.text import draw_text_box, fit_text
 from app.form_fields import FIELD_LABELS
 from app.pdf.layout import prepare_fields
+from app.pdf.mapping import CHECK_FIELD_LABELS
 
 
 def render_assessment_pdf(snapshot: dict, template_path: Path, font_path: Path | None, name_box: TextBox | None, *, fields: dict[str, str] | None = None) -> bytes:
@@ -68,9 +69,14 @@ def render_assessment_pdf(snapshot: dict, template_path: Path, font_path: Path |
         draw_text_box(canvas, layout, font_name, box, height)
     canvas.showPage()
     canvas.save()
+    return merge_overlay(page, overlay.getvalue())
+
+
+def merge_overlay(page, overlay: bytes) -> bytes:
+    """Merge in memory, retaining the source page and actual-size print settings."""
     writer = PdfWriter()
     page = writer.add_page(page)
-    page.merge_page(PdfReader(BytesIO(overlay.getvalue())).pages[0])
+    page.merge_page(PdfReader(BytesIO(overlay)).pages[0])
     writer.add_metadata({"/Title": "Assessment"})
     writer.root_object[NameObject("/ViewerPreferences")] = DictionaryObject({
         NameObject("/PrintScaling"): NameObject("/None"),
@@ -79,3 +85,26 @@ def render_assessment_pdf(snapshot: dict, template_path: Path, font_path: Path |
     output = BytesIO()
     writer.write(output)
     return output.getvalue()
+
+
+def render_checksheet_pdf(fields: dict[str, str], template_path: Path, font_path: Path | None) -> bytes:
+    page = load_template(template_path)
+    width, height = float(page.mediabox.width), float(page.mediabox.height)
+    font_name = register_font(font_path)
+    layouts = []
+    for key, label in CHECK_FIELD_LABELS.items():
+        box = coordinates.CHECK_FIELD_POSITIONS.get(key)
+        if box is None:
+            raise PdfError(f"{label}の印字座標が未設定です。")
+        box.validate(width / mm, height / mm)
+        value = fields.get(key, "")
+        if value:
+            ensure_glyphs(value, font_name, label)
+            layouts.append((box, fit_text(value, font_name, box, label)))
+    overlay = BytesIO()
+    canvas = Canvas(overlay, pagesize=(width, height))
+    for box, layout in layouts:
+        draw_text_box(canvas, layout, font_name, box, height)
+    canvas.showPage()
+    canvas.save()
+    return merge_overlay(page, overlay.getvalue())

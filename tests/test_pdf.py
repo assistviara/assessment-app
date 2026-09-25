@@ -21,6 +21,7 @@ from app.pdf.errors import PdfError, PdfInputError
 from app.pdf.fonts import register_font
 from app.pdf.renderer import render_assessment_pdf
 from app.pdf.text import fit_text
+from app.pdf.mapping import CHECK_FIELD_LABELS
 
 
 @pytest.fixture
@@ -100,8 +101,10 @@ def test_http_uses_snapshot_and_does_not_write_db(web, session, pdf_assets):
     assert 'target="_blank"' in page
 
 
-def test_second_sheet_endpoint_not_implemented(web):
-    assert web.get("/assessments/1/pdf/check").status_code == 404
+def test_second_sheet_missing_assessment(web):
+    response = web.get("/assessments/999/pdf/check")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "対象のデータが見つかりません。"
 
 
 def test_missing_assessment(web):
@@ -119,7 +122,9 @@ def test_rendered_pdf_link_uses_registered_route_and_correct_assessment(web, ses
 
         def handle_starttag(self, tag, attrs):
             attrs = dict(attrs)
-            if tag == "a" and attrs.get("href", "").endswith("/pdf/assessment"):
+            if tag == "a" and attrs.get("href", "").endswith(("/pdf/assessment", "/pdf/check")):
+                assert attrs.get("target") == "_blank"
+                assert attrs.get("rel") == "noopener"
                 self.links.append(attrs["href"])
 
     client = Client(id=20, name="現在の氏名")
@@ -129,6 +134,13 @@ def test_rendered_pdf_link_uses_registered_route_and_correct_assessment(web, ses
         Assessment(id=101, client_id=client.id, client_snapshot={"name": "前回の氏名"}),
         Assessment(id=202, client_id=client.id, client_snapshot={"name": "対象の氏名"}),
     ])
+    session.flush()
+    values = {key: f"対象の{label}の保存値" for key, label in CHECK_FIELD_LABELS.items()}
+    session.add_all([
+        AssessmentCheck(assessment_id=101, **{key: "別Assessmentの値" for key in values}),
+        AssessmentCheck(assessment_id=202, **values),
+    ])
+    session.add(Client(id=21, name="初回作成用の利用者"))
     session.commit()
     # The fixture already owns this app's lifespan and DB; mounting only tests URL generation.
     if prefix:
@@ -142,14 +154,30 @@ def test_rendered_pdf_link_uses_registered_route_and_correct_assessment(web, ses
         assert page.status_code == 200
         parser = PdfLinkParser()
         parser.feed(page.text)
-        assert len(parser.links) == 1
+        assert len(parser.links) == 2
+        assert "1枚目PDFを開く" in page.text and "2枚目PDFを開く" in page.text
         assert parser.links[0].endswith(f"{prefix}/assessments/202/pdf/assessment")
         response = browser.get(parser.links[0])
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/pdf"
+        assert response.headers["content-disposition"].startswith("inline;")
         text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
         assert "対象の氏名" in text
         assert "前回の氏名" not in text and "現在の氏名" not in text
+        assert parser.links[1].endswith(f"{prefix}/assessments/202/pdf/check")
+        response = browser.get(parser.links[1])
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/pdf"
+        assert response.headers["content-disposition"].startswith("inline;")
+        pdf = PdfReader(BytesIO(response.content))
+        assert len(pdf.pages) == 1
+        assert pdf.pages[0].extract_text().replace("\n", "") == "".join(values.values())
+        for path in ("/clients/21/assessments/new", "/clients/20/reassessments/new"):
+            page = browser.get(f"{prefix}{path}")
+            assert page.status_code == 200
+            parser = PdfLinkParser()
+            parser.feed(page.text)
+            assert parser.links == []
     finally:
         browser.close()
 

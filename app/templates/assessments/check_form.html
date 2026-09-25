@@ -2,6 +2,8 @@
 {% from 'fields.html' import render_fields %}
 {% block content %}
 <p>利用者：<a href="/clients/{{ client.id }}">{{ client.name }}</a> / Assessment {{ assessment.id }}</p>
+<p><a href="{{ url_for('assessment_check_pdf', assessment_id=assessment.id) }}" target="_blank" rel="noopener">2枚目PDFを開く（チェックシート）</a></p>
+<p>保存済みのチェックシート14項目を出力します。未保存の変更は反映されません。印刷はA4・縦・実際のサイズ（100%）を指定してください。</p>
 <form method="post" action="/assessments/{{ assessment.id }}/check">
   <fieldset><legend>AssessmentCheck</legend>{{ render_fields(fields, values, choices) }}</fieldset>
   <div class="actions"><button type="submit">保存</button><a href="/clients/{{ client.id }}">キャンセル</a></div>

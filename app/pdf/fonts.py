@@ -7,9 +7,10 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
 
 from app.pdf.errors import PdfError, PdfInputError
+from app.paths import resource_root
 
 # No OS-font fallback or automatic download. Set after the user's font selection.
-JAPANESE_FONT_PATH: Path | None = Path(__file__).resolve().parents[2] / "assets" / "fonts" / "ipaexg.ttf"
+JAPANESE_FONT_PATH: Path | None = resource_root() / "assets" / "fonts" / "ipaexg.ttf"
 _registration_lock = Lock()
 
 

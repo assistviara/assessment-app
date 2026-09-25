@@ -1,4 +1,4 @@
-"""Read-only mapping from saved models to the first assessment sheet."""
+"""Read-only mapping from saved models to the assessment sheets."""
 
 from datetime import date
 
@@ -64,3 +64,28 @@ def assessment_fields(assessment: Assessment) -> dict[str, str]:
     # EmergencyContact has no assessment-time snapshot. Never read the current
     # Client relationship here: changing it must not change historical PDFs.
     return fields
+
+
+CHECK_FIELD_LABELS = {
+    "health_status": "健康状態",
+    "adl": "ADL",
+    "iadl": "IADL",
+    "cognition": "認知",
+    "communication": "コミュニケーション能力",
+    "social_relationship": "社会との関わり",
+    "elimination": "排尿・排便",
+    "skin": "褥瘡・皮膚の問題",
+    "oral_hygiene": "口腔衛生",
+    "nutrition": "食事摂取",
+    "behavior": "問題行動",
+    "caregiving_capacity": "介護力",
+    "home_environment": "居住環境",
+    "special_conditions": "特別な状況",
+}
+
+
+def assessment_check_fields(assessment: Assessment) -> dict[str, str]:
+    """Only the saved check belonging to this assessment; no current-data fallback."""
+    if assessment.check is None:
+        raise PdfInputError("このAssessmentのAssessmentCheckが保存されていないため、PDFを生成できません。")
+    return {key: text(getattr(assessment.check, key)) for key in CHECK_FIELD_LABELS}

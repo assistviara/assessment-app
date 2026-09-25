@@ -115,3 +115,24 @@ RECEIVED_ERA_STRIKE = (38.5, 46.5, 32)
 RECEIVED_WEEKDAY_BOX = TextBox(110, 30, 4, 4, 9, 7)
 SUPPORT_LEVEL_BOX = TextBox(148, 211.6, 13, 3.2, 7, 6.5)
 SUPPORT_APPLICATION_BOX = TextBox(162, 211.6, 22, 3.2, 7, 6.5)
+
+
+# assessment_checksheet.pdf SHA256 a290c6f8...361cc1d, visually measured.
+# Health status cell: x ~= 61.7..192.5, y ~= 19.7..38.4 mm.
+# Inset from all grid lines. Health status retains the approved placement.
+CHECK_FIELD_POSITIONS: dict[str, TextBox | None] = {
+    "health_status": TextBox(64, 22, 126, 14, 10, 7),
+    "adl": TextBox(64, 40.8, 126, 14, 10, 7),
+    "iadl": TextBox(64, 59.5, 126, 14, 10, 7),
+    "cognition": TextBox(64, 78.2, 126, 14, 10, 7),
+    "communication": TextBox(64, 96.9, 126, 14, 10, 7),
+    "social_relationship": TextBox(64, 115.5, 126, 14, 10, 7),
+    "elimination": TextBox(64, 134.2, 126, 14, 10, 7),
+    "skin": TextBox(64, 152.8, 126, 14, 10, 7),
+    "oral_hygiene": TextBox(64, 171.5, 126, 14, 10, 7),
+    "nutrition": TextBox(64, 190.1, 126, 14, 10, 7),
+    "behavior": TextBox(64, 208.9, 126, 14, 10, 7),
+    "caregiving_capacity": TextBox(64, 227.5, 126, 14, 10, 7),
+    "home_environment": TextBox(64, 246.3, 126, 14, 10, 7),
+    "special_conditions": TextBox(64, 265.1, 126, 14, 10, 7),
+}

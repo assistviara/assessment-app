@@ -6,20 +6,23 @@ from pypdf.errors import PdfReadError
 from reportlab.lib.pagesizes import A4
 
 from app.pdf.errors import PdfError
+from app.paths import resource_root
 
-ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+ASSETS_DIR = resource_root() / "assets"
 ASSESSMENT_TEMPLATE_PATH = ASSETS_DIR / "pdf_templates" / "assessment_form.pdf"
+
+CHECKSHEET_TEMPLATE_PATH = ASSETS_DIR / "pdf_templates" / "assessment_checksheet.pdf"
 
 
 def load_template(path: Path):
     if not path.is_file():
-        raise PdfError("1枚目のPDF帳票が未配置です。assets/pdf_templates/assessment_form.pdf を確認してください。")
+        raise PdfError(f"PDF帳票が未配置です。{path.name} を確認してください。")
     try:
         reader = PdfReader(BytesIO(path.read_bytes()), strict=True)
         if reader.is_encrypted:
             raise PdfError("暗号化されたPDF帳票には対応していません。")
         if len(reader.pages) != 1:
-            raise PdfError("1ページ構成の1枚目帳票を配置してください。")
+            raise PdfError("1ページ構成の帳票を配置してください。")
         page = reader.pages[0]
         if page.rotation:
             page.transfer_rotation_to_content()

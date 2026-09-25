@@ -1,12 +1,11 @@
-from pathlib import Path
-
 from fastapi import HTTPException
 from fastapi.templating import Jinja2Templates
 
 from app.choices import SELECT_CHOICES
 from app.form_fields import FIELD_LABELS
+from app.paths import resource_root
 
-templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+templates = Jinja2Templates(directory=resource_root() / "app" / "templates")
 CHOICES = {**SELECT_CHOICES, "disability_certificate_present": {"true": "有", "false": "無"}}
 
 
