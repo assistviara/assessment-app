@@ -1,7 +1,15 @@
 # Windows配布版 Implementation Plan
 
 作成日: 2026-09-25
-状態: 計画承認済み。第1段階（パス管理と環境別DB保存先）を実装済み。exe生成・実DB移行は未実施。
+状態: パス分離・ランチャー・終了機能を実装済み。診断用onedir exeを初回生成済み。exe実機確認・実DB移行は未実施。
+
+## 初回診断用onedirビルド
+
+- `packaging/assessment.spec` を追加。launcher.pyを入口とし、console=True、UPX無効、`アセスメント.exe` と `_internal/` を `dist/独自アセスメント/` に生成する。
+- HTML全体、CSS、PDF2点、IPAexフォントとライセンス・Readmeをdatasへ明示。標準hookで収集し、hiddenimportsは空。アプリコード・通常依存は変更しない。
+- Windows 11 x64・Python 3.13.15、PyInstaller 6.22.3／hooks-contrib 2026.7で `.\.venv313\Scripts\python.exe -m PyInstaller packaging/assessment.spec` が成功。資産15ファイルの同梱と原本ハッシュ一致を確認。exe実行はユーザー確認待ち。
+- 警告: tzdata、pysqlite2、MySQLdb、psycopg2のhidden import未検出など。現在の起動構成は標準SQLite・asyncio・h11で、代替DBやWebSocket等の任意依存は追加しない。詳細は `build/assessment/warn-assessment.txt`。
+- console=False、独自hook、version情報、ビルドスクリプト、requirements-build.lockは今回対象外。成功構成の固定は実機確認後に別途行う。
 
 ## Pythonランチャー段階（2026-09-28）
 

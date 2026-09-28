@@ -1,6 +1,8 @@
 .venv/
 .venv313/
 .tools/
+build/
+dist/
 
 __pycache__/
 *.py[cod]
