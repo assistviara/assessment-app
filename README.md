@@ -36,30 +36,31 @@ DBがなければ新規作成します。通常の開発起動のDB保存先は�
 
 ログは `%LOCALAPPDATA%\AssessmentApp\logs\app.log`（UTF-8、2MB・3世代）です。
 アクセスログと例外本文は保存せず、起動段階・ポート・エラー種別を記録します。
-起動失敗は日本語ダイアログで通知します。診断用exeのビルド方法は下記を参照してください。コンソール非表示は未実装です。
+起動失敗は日本語ダイアログで通知します。コンソールなしexeのビルド方法は下記を参照してください。
 
 手動確認では、上記コマンドで画面が開いた後、「アプリを終了する」の確認を一度キャンセルして操作を継続できることを確認します。
 再度押して承認し、終了受付画面の表示と実行元への復帰を確認してください。停止後に同じコマンドで再起動できることも確認してください。
 運用データ領域を使いたくない場合は、実行するPowerShell内だけで `$env:LOCALAPPDATA` を
 ワークスペース内の専用検証フォルダの絶対パスへ変更し、確認後に元の値へ戻してください。
 
-## 診断用Windows exe（初回onedir）
+## コンソールなしWindows exe（onedir）
 
 Windows 11 x64・Python 3.13.15の `.venv313` で、プロジェクトrootから実行します。
 PyInstallerはビルド用として仮想環境へ導入し、通常のアプリ依存には追加しません。
 
 ```powershell
 .\.venv313\Scripts\python.exe -m pip install pyinstaller==6.22.3
-.\.venv313\Scripts\python.exe -m PyInstaller packaging/assessment.spec
+.\.venv313\Scripts\python.exe -m PyInstaller --clean --noconfirm packaging/assessment.spec
 ```
 
-初回ビルド使用版: PyInstaller 6.22.3、pyinstaller-hooks-contrib 2026.7。
+ビルド使用版: PyInstaller 6.22.3、pyinstaller-hooks-contrib 2026.7。
 出力は `dist/独自アセスメント/アセスメント.exe` と `_internal/`。フォルダ全体で扱ってください。
-onedir・console=True・UPX無効。標準hookを利用し、独自hiddenimportsは空です。
-ビルド成功と資産同梱は確認済みですが、exeの起動・ブラウザ・終了の実機確認は未実施です。
+onedir・console=False・UPX無効。標準hookを利用し、独自hiddenimportsは空です。
+2026-09-28: 再ビルド成功。PE subsystem=2（Windows GUI）、exeは12,604,685 bytes。資産15ファイルの原本とのSHA-256一致、dist内にDB・ログがないことを確認しました。
+診断版はユーザーによる起動・保存・PDF反映・終了・再起動・データ保持の実機確認済みです。コンソールなし版の実機確認は未実施です。
 既存サーバーを終了してからexeを起動し、ブラウザ表示、終了のキャンセル・承認、終了受付画面、再起動を確認してください。
-Pythonランチャーと同じLocalAppData側DB・ログを使います。診断用のためコンソールが表示されます。
-警告一覧は `build/assessment/warn-assessment.txt`。ビルド環境のlock化は実機確認後の別段階とします。
+Pythonランチャーと同じLocalAppData側DB・ログを使います。黒いコンソールが表示されないことも確認してください。
+警告一覧は `build/assessment/warn-assessment.txt`。診断版と同じ147件で、pwd・posixの参照元の表示順のみ変化しています。ビルド環境のlock化は実機確認後の別段階とします。
 
 ## 環境の準備
 

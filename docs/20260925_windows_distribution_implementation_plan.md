@@ -1,7 +1,15 @@
 # Windows配布版 Implementation Plan
 
 作成日: 2026-09-25
-状態: パス分離・ランチャー・終了機能を実装済み。診断用onedir exeを初回生成済み。exe実機確認・実DB移行は未実施。
+状態: パス分離・ランチャー・終了機能を実装済み。診断用onedir exeはユーザー実機確認済み。コンソールなし版はビルド・静的検証済み、実機確認待ち。実DB移行は未実施。
+
+## コンソールなしonedirビルド（2026-09-28）
+
+- specの`console=True`のみ`console=False`へ変更。アプリコード・hiddenimports・datas・UPX無効・onedir・出力名・`_internal`構成は維持。
+- 既存のbuild/assessmentとdist/独自アセスメントを削除して再生成。Python 3.13.15、PyInstaller 6.22.3／hooks-contrib 2026.7で`python -m PyInstaller --clean --noconfirm packaging/assessment.spec`が成功。
+- `dist/独自アセスメント/アセスメント.exe`はPE subsystem=2（Windows GUI）、12,604,685 bytes。資産15ファイルの原本とのSHA-256一致、dist内にDB・ログがないことを確認。
+- warn-assessment.txtは診断版と同じ147件。pwd・posixの参照元の表示順のみ変化し、追加・削除なし。ビルド時のhidden import警告（tzdata、pysqlite2、MySQLdb、psycopg2）も初回記録と同じ。
+- exe起動はCodex側では未実施。ユーザーがコンソール非表示、ブラウザ・CSS、入力保存・PDF反映、終了キャンセル・正常終了、再起動とLocalAppDataのデータ保持を確認する。
 
 ## 初回診断用onedirビルド
 
