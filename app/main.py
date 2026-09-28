@@ -1,4 +1,7 @@
 from contextlib import asynccontextmanager
+from collections.abc import Awaitable, Callable
+import secrets
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
@@ -6,10 +9,18 @@ from fastapi.staticfiles import StaticFiles
 
 from app.db import init_db, make_engine
 from app.paths import default_database_path, resource_root
-from app.routers import assessments, clients, pdf
+from app.routers import assessments, clients, desktop, pdf
 
 
-def create_app(database_url: str | None = None) -> FastAPI:
+def create_app(database_url: str | None = None, *,
+               desktop_shutdown: Callable[[], Awaitable[None]] | None = None,
+               desktop_origin: str | None = None) -> FastAPI:
+    if desktop_shutdown is not None:
+        origin = urlsplit(desktop_origin or "")
+        if (origin.scheme != "http" or origin.hostname != "127.0.0.1"
+                or origin.port is None or not 1 <= origin.port <= 65535
+                or desktop_origin != f"http://127.0.0.1:{origin.port}"):
+            raise ValueError("終了機能には127.0.0.1のポート付きOriginが必要です。")
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         if database_url is None:
@@ -27,6 +38,11 @@ def create_app(database_url: str | None = None) -> FastAPI:
             engine.dispose()
 
     application = FastAPI(title="Assessment App", lifespan=lifespan)
+    application.state.desktop_shutdown = desktop_shutdown
+    if desktop_shutdown is not None:
+        application.state.desktop_origin = desktop_origin
+        application.state.desktop_token = secrets.token_urlsafe(32)
+        application.include_router(desktop.router)
     application.mount("/static", StaticFiles(directory=resource_root() / "app" / "static"), name="static")
     application.include_router(clients.router)
     application.include_router(assessments.router)

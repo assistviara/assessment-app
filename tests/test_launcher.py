@@ -2,6 +2,10 @@ import errno
 import logging
 import socket
 import threading
+from http.client import HTTPConnection
+import re
+import time
+from urllib.parse import urlsplit, urlencode
 from types import SimpleNamespace
 
 import pytest
@@ -186,3 +190,65 @@ def test_invalid_database_stops_without_browser(tmp_path, monkeypatch):
     assert len(messages) == 1
     assert database.read_bytes() == b"invalid database - private data"
     assert "private data" not in (tmp_path / "AssessmentApp/logs/app.log").read_text(encoding="utf-8")
+
+
+def test_shutdown_post_stops_real_server_and_disposes_engine(tmp_path, monkeypatch):
+    from sqlalchemy import event
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    original = launcher.reserve_socket
+    sockets = []
+    def reserve():
+        sock = original(0)
+        sockets.append(sock)
+        return sock
+    monkeypatch.setattr(launcher, "reserve_socket", reserve)
+    servers = []
+    factory = launcher.uvicorn.Server
+    def make_server(config):
+        server = factory(config)
+        servers.append(server)
+        return server
+    monkeypatch.setattr(launcher.uvicorn, "Server", make_server)
+    disposed = []
+    responses = []
+    tokens = []
+    requested = []
+    def open_browser(url):
+        server = servers[-1]
+        event.listen(server.config.app.state.engine, "engine_disposed",
+                     lambda engine: disposed.append(True))
+        parsed = urlsplit(url)
+        connection = HTTPConnection(parsed.hostname, parsed.port, timeout=5)
+        try:
+            connection.request("GET", "/clients")
+            page = connection.getresponse().read().decode()
+            token = re.search(r'name="shutdown_token" value="([^"]+)"', page).group(1)
+            tokens.append(token)
+            connection.request("POST", "/desktop/shutdown",
+                               body=urlencode({"shutdown_token": token}),
+                               headers={"Origin": f"http://{parsed.netloc}",
+                                        "Content-Type": "application/x-www-form-urlencoded"})
+            response = connection.getresponse()
+            responses.append((response.status, response.read().decode()))
+            deadline = time.monotonic() + 2
+            while not server.should_exit and time.monotonic() < deadline:
+                time.sleep(0.01)
+            requested.append(server.should_exit)
+        finally:
+            connection.close()
+            # Prevent a failed assertion/probe from leaving a test server running.
+            server.should_exit = True
+        return True
+    monkeypatch.setattr(launcher.webbrowser, "open", open_browser)
+    monkeypatch.setattr(launcher, "show_error", lambda message: pytest.fail(message))
+    for _ in range(2):
+        assert launcher.main() == 0
+    assert len(responses) == 2
+    assert all(status == 200 and "このタブを閉じてください。" in body for status, body in responses)
+    assert disposed == [True, True]
+    assert requested == [True, True]
+    assert all(sock.fileno() == -1 for sock in sockets)
+    assert tokens[0] != tokens[1]
+    log = (tmp_path / "AssessmentApp/logs/app.log").read_text(encoding="utf-8")
+    assert "Shutdown requested from application" in log
+    assert all(token not in log for token in tokens)

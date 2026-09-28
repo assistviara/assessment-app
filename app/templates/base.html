@@ -8,6 +8,13 @@
 </head>
 <body>
   <header><a href="/clients">アセスメント・利用者一覧</a></header>
+  {% if request.app.state.desktop_shutdown %}
+  <form method="post" action="/desktop/shutdown"
+        onsubmit="return window.confirm('アプリを終了しますか？\n未保存の入力内容は保存されません。他のタブでもこのアプリを利用できなくなります。');">
+    <input type="hidden" name="shutdown_token" value="{{ request.app.state.desktop_token }}">
+    <button type="submit">アプリを終了する</button>
+  </form>
+  {% endif %}
   <main>
     <h1>{{ title }}</h1>
     {% if errors %}

@@ -129,7 +129,13 @@ def main():
         port = sock.getsockname()[1]
         logger.info("Listening on loopback port %s", port)
         from app.main import create_app
-        application = create_app(database_url=f"sqlite:///{database.as_posix()}")
+        async def request_shutdown():
+            logger.info("Shutdown requested from application")
+            server.should_exit = True
+
+        application = create_app(database_url=f"sqlite:///{database.as_posix()}",
+                                 desktop_shutdown=request_shutdown,
+                                 desktop_origin=f"http://{HOST}:{port}")
         config = uvicorn.Config(application, host=HOST, port=port, workers=1,
                                 reload=False, loop="asyncio", http="h11", ws="none",
                                 lifespan="on", log_config=None, access_log=False)
